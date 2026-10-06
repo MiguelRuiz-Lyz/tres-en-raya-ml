@@ -1,0 +1,7 @@
+# Librerías externas del proyecto.
+# Tkinter ya viene incluido con Python.
+# Se agregarán en la Semana 3:
+# scikit-learn
+# pandas
+# matplotlib
+# graphviz

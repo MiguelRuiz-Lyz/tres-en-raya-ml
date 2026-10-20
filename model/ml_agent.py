@@ -13,6 +13,8 @@ import random
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, export_text
 
 from model.game_model import Board
 from model.minimax_agent import MinimaxAgent
@@ -230,3 +232,120 @@ def build_dataset(n_games=1000, seed=42, path=None):
     if path is not None:
         save_dataset(tabla, path)
     return tabla, informe, resumen
+
+
+
+# ----------------------------------------------------------------------
+# Día 3: entrenamiento y reglas del Árbol de Decisión
+# ----------------------------------------------------------------------
+def split_dataset(df, test_size=0.2, seed=42):
+    """Separa la tabla en entrenamiento y prueba.
+    Devuelve (X_train, X_test, y_train, y_test)."""
+    X = df[FEATURE_COLUMNS]
+    y = df[TARGET_COLUMN]
+    return train_test_split(X, y, test_size=test_size, random_state=seed)
+
+
+def train_tree(X_train, y_train, max_depth=None, seed=42):
+    """Entrena un DecisionTreeClassifier. max_depth=None = sin límite."""
+    tree = DecisionTreeClassifier(max_depth=max_depth, random_state=seed)
+    tree.fit(X_train, y_train)
+    return tree
+
+
+def accuracy(tree, X, y):
+    """Fracción de posiciones donde el árbol coincide con Minimax (0 a 1)."""
+    return float(tree.score(X, y))
+
+
+def legal_prediction_rate(tree, X):
+    """Fracción de predicciones que caen en una casilla LIBRE (0 a 1)."""
+    valores = X.to_numpy()
+    predichas = tree.predict(X).astype(int)
+    libres = valores[np.arange(len(valores)), predichas] == 0
+    return float(libres.mean())
+
+
+def tree_rules(tree, max_depth=10):
+    """Las reglas del árbol como texto (export_text)."""
+    return export_text(tree, feature_names=FEATURE_COLUMNS, max_depth=max_depth)
+
+
+def save_tree_plot(tree, path, max_depth=3):
+    """Dibuja el árbol (solo los primeros niveles) y lo guarda como imagen."""
+    import matplotlib
+    matplotlib.use("Agg")                # sin ventana: solo genera el archivo
+    import matplotlib.pyplot as plt
+    from sklearn.tree import plot_tree
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fig, ax = plt.subplots(figsize=(22, 10))
+    plot_tree(tree, feature_names=FEATURE_COLUMNS,
+              class_names=[str(c) for c in tree.classes_],
+              filled=True, rounded=True, max_depth=max_depth,
+              fontsize=8, ax=ax)
+    fig.savefig(path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+
+# ----------------------------------------------------------------------
+# Día 4: agente de Machine Learning (juega usando el Árbol de Decisión)
+# ----------------------------------------------------------------------
+# Orden de respaldo si el árbol no aporta ninguna casilla libre:
+# centro, esquinas, aristas. NO es conocimiento aprendido.
+FALLBACK_ORDER = (4, 0, 2, 6, 8, 1, 3, 5, 7)
+
+
+class MLAgent:
+    """Agente que elige jugadas con un Árbol de Decisión ya entrenado.
+    Mismo contrato que MinimaxAgent: get_move(board) y nodes_evaluated."""
+
+    def __init__(self, tree, ai_player='O', human_player='X'):
+        if ai_player == human_player:
+            raise ValueError("La IA y el humano deben usar fichas distintas.")
+        self.tree = tree
+        self.ai_player = ai_player
+        self.human_player = human_player
+        self.nodes_evaluated = 0       # el árbol no explora nodos: siempre 0
+        self.moves = 0                 # jugadas hechas
+        self.fallbacks = 0             # veces que se usó el orden de respaldo
+        self.last_was_fallback = False
+
+    @classmethod
+    def from_dataset(cls, ai_player='O', path=DEFAULT_DATASET_PATH,
+                     max_depth=None, n_games=1000, seed=42):
+        """Entrena un árbol con el CSV y devuelve el agente.
+        Si el CSV no existe, lo genera primero."""
+        if not os.path.exists(path):
+            build_dataset(n_games, seed, path)
+        df = load_dataset(path)
+        tree = train_tree(df[FEATURE_COLUMNS], df[TARGET_COLUMN],
+                          max_depth=max_depth)
+        human = 'X' if ai_player == 'O' else 'O'
+        return cls(tree, ai_player, human)
+
+    def get_move(self, board):
+        """Mejor casilla LIBRE según el árbol, o None si la partida terminó."""
+        libres = board.get_available_moves()
+        if board.is_game_over() or not libres:
+            return None
+
+        fila = pd.DataFrame([encode_board(board, self.ai_player)],
+                            columns=FEATURE_COLUMNS)
+        probs = self.tree.predict_proba(fila)[0]
+        prob = {int(c): float(p) for c, p in zip(self.tree.classes_, probs)}
+
+        def valor(move):
+            idx = move_to_index(move)
+            # Mayor probabilidad primero; si empatan, el orden de respaldo
+            return (prob.get(idx, 0.0), -FALLBACK_ORDER.index(idx))
+
+        mejor = max(libres, key=valor)
+
+        self.moves += 1
+        self.last_was_fallback = prob.get(move_to_index(mejor), 0.0) == 0.0
+        if self.last_was_fallback:
+            self.fallbacks += 1
+        return mejor

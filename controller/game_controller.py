@@ -152,6 +152,9 @@ class GameController:
         """Pide una jugada al agente, mide el tiempo y la aplica."""
         agent = self.agents[self.mode]
 
+        self.view.set_status("La IA está pensando...")   
+        self.view.refresh()                              
+
         inicio = time.perf_counter()
         move = agent.get_move(self.board)
         elapsed_ms = (time.perf_counter() - inicio) * 1000

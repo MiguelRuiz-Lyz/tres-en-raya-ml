@@ -171,6 +171,10 @@ class GameView:
     def get_mode(self):
         return self.mode_var.get()
 
+    def refresh(self):
+        """Fuerza el repintado de la ventana (útil antes de un cálculo largo)."""
+        self.root.update_idletasks()    
+
     def run(self):
         """Arranca la ventana y espera eventos (clics, etc.)."""
         self.root.mainloop()

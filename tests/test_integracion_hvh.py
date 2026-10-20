@@ -25,6 +25,7 @@ class VistaFalsa:
         self.score = (0, 0, 0)
         self.metrics = None
         self.board_enabled = True
+        self.refresh_calls = 0
 
     # --- Los mismos métodos públicos que tiene la vista real ---
     def get_mode(self):
@@ -51,6 +52,9 @@ class VistaFalsa:
 
     def clear_metrics(self):
         self.metrics = None
+
+    def refresh(self):
+        self.refresh_calls += 1
 
     # --- Simula el clic de un usuario ---
     def click(self, row, col):

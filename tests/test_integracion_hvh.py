@@ -26,6 +26,7 @@ class VistaFalsa:
         self.metrics = None
         self.board_enabled = True
         self.refresh_calls = 0
+        self.summary = None
 
     # --- Los mismos métodos públicos que tiene la vista real ---
     def get_mode(self):
@@ -52,6 +53,12 @@ class VistaFalsa:
 
     def clear_metrics(self):
         self.metrics = None
+
+    def set_metrics_summary(self, moves, avg_nodes, avg_ms, max_ms):
+        self.summary = (moves, avg_nodes, avg_ms, max_ms)
+
+    def clear_metrics_summary(self):
+        self.summary = None
 
     def refresh(self):
         self.refresh_calls += 1

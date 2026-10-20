@@ -23,7 +23,7 @@ class GameView:
     def __init__(self, root):
         self.root = root
         self.root.title("Tres en Raya - Minimax vs Árbol de Decisión")
-        self.root.minsize(620, 420)
+        self.root.minsize(640, 520)
 
         # "Ranuras" que el controlador llenará en el Día 4.
         self.on_cell_click = None    # función(fila, columna)
@@ -36,6 +36,7 @@ class GameView:
         self.score_var = tk.StringVar(value="X: 0   O: 0   Empates: 0")
         self.nodes_var = tk.StringVar(value="—")
         self.time_var = tk.StringVar(value="—")
+        self.summary_var = tk.StringVar(value="—")
 
         self.cells = []  # matriz 3x3 de botones
         self._build_layout()
@@ -113,6 +114,11 @@ class GameView:
         tk.Label(metrics_box, textvariable=self.time_var, anchor="w",
                  font=("Helvetica", 12, "bold")).pack(fill="x")
 
+        tk.Label(metrics_box, text="Acumulado de la IA:", anchor="w").pack(
+            fill="x", pady=(6, 0))
+        tk.Label(metrics_box, textvariable=self.summary_var, anchor="w",
+                 justify="left").pack(fill="x")
+
         # Botón de nueva partida
         tk.Button(side, text="Nueva partida", command=self._reset_clicked,
                   pady=6).pack(fill="x")
@@ -167,6 +173,17 @@ class GameView:
     def clear_metrics(self):
         self.nodes_var.set("—")
         self.time_var.set("—")
+
+    def set_metrics_summary(self, moves, avg_nodes, avg_ms, max_ms):
+        """Muestra el resumen acumulado de la IA."""
+        self.summary_var.set(
+            f"Jugadas de la IA: {moves}\n"
+            f"Promedio: {avg_nodes:,.0f} nodos, {avg_ms:.2f} ms\n"
+            f"Más lenta: {max_ms:.2f} ms"
+        )
+
+    def clear_metrics_summary(self):
+        self.summary_var.set("—")
 
     def get_mode(self):
         return self.mode_var.get()

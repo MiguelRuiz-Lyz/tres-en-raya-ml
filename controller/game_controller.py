@@ -9,7 +9,7 @@ Humano vs Minimax y Humano vs ML.
 """ 
 
 import time
-
+from controller.metrics import MetricsTracker
 
 class GameController:
     HUMAN = 'X'   # En los modos contra IA, el humano juega con X
@@ -34,6 +34,7 @@ class GameController:
         # Casillero de agentes de IA: {"minimax": agente, "ml": agente}.
         # Hoy está vacío; se llenará en las Semanas 2 y 3.
         self.agents = {}
+        self.metrics = MetricsTracker()
 
         # Conectar las "ranuras" de la vista con los métodos de este controlador
         self.view.on_cell_click = self.handle_cell_click
@@ -85,10 +86,12 @@ class GameController:
     def handle_mode_change(self, mode):
         """El usuario eligió otro modo de juego."""
         if mode == self.mode:
-            return   # Mismo modo: no hay nada que cambiar (ni borrar el marcador)
+            return   # Mismo modo: no hay nada que cambiar
         self.mode = mode
-        # Cambiar de modo reinicia el marcador, para comparar modos limpiamente
+        # Cambiar de modo reinicia marcador y métricas, para comparar limpiamente
         self.scores = {'X': 0, 'O': 0, 'draw': 0}
+        self.metrics.reset()
+        self.view.clear_metrics_summary()
         self._start_new_game()
 
     def handle_reset(self):
@@ -161,6 +164,13 @@ class GameController:
 
         nodes = getattr(agent, "nodes_evaluated", 0)
         self.view.set_metrics(nodes, elapsed_ms)
+
+        if move is not None:                                  
+            self.metrics.record(nodes, elapsed_ms)            
+            self.view.set_metrics_summary(                    
+                self.metrics.moves, self.metrics.avg_nodes,   
+                self.metrics.avg_ms, self.metrics.max_ms,     
+            )                                                 
 
         if move is None or not self._play(move):
             # La IA propuso algo ilegal: detenemos la partida sin desincronizar

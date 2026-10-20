@@ -10,6 +10,7 @@ from model.game_model import Board
 from model.minimax_agent import MinimaxAgent
 from view.gui_view import GameView
 from controller.game_controller import GameController
+from model.ml_agent import MLAgent
 
 
 def main():
@@ -21,7 +22,9 @@ def main():
 
     # La IA juega con O y el humano con X (igual que el controlador)
     controller.register_agent("minimax", MinimaxAgent(ai_player='O', human_player='X'))
-    # Semana 3: aquí se registrará el agente "ml"
+
+    # El árbol se entrena al arrancar con data/dataset.csv (tarda milisegundos)
+    controller.register_agent("ml", MLAgent.from_dataset(ai_player='6'))
 
     view.run()
 

@@ -84,6 +84,8 @@ class GameController:
 
     def handle_mode_change(self, mode):
         """El usuario eligió otro modo de juego."""
+        if mode == self.mode:
+            return   # Mismo modo: no hay nada que cambiar (ni borrar el marcador)
         self.mode = mode
         # Cambiar de modo reinicia el marcador, para comparar modos limpiamente
         self.scores = {'X': 0, 'O': 0, 'draw': 0}
@@ -113,11 +115,18 @@ class GameController:
             self.view.set_status(f"Turno de {self.current_player}")
 
     def _play(self, move):
-        """Aplica una jugada del jugador actual y actualiza modelo y vista."""
+        """
+        Aplica una jugada del jugador actual y actualiza modelo y vista.
+        Devuelve True si el modelo la aceptó y False si la rechazó.
+        """
         player = self.current_player
 
-        self.board.make_move(move, player)            # 1) Modelo
-        self.view.set_cell(move[0], move[1], player)  # 2) Vista
+        # 1) Modelo: solo si ÉL acepta la jugada, la vista la dibuja
+        if not self.board.make_move(move, player):
+            return False
+
+        # 2) Vista
+        self.view.set_cell(move[0], move[1], player)
 
         # 3) ¿Terminó la partida? Pregunta al modelo.
         winner = self.board.get_winner()
@@ -129,6 +138,8 @@ class GameController:
             # 4) Cambiar de turno
             self.current_player = 'O' if player == 'X' else 'X'
             self.view.set_status(f"Turno de {self.current_player}")
+
+        return True
 
     def _finish_game(self, message, result):
         self.game_over = True
@@ -148,4 +159,10 @@ class GameController:
         nodes = getattr(agent, "nodes_evaluated", 0)
         self.view.set_metrics(nodes, elapsed_ms)
 
-        self._play(move)
+        if move is None or not self._play(move):
+            # La IA propuso algo ilegal: detenemos la partida sin desincronizar
+            self.game_over = True
+            self.view.set_board_enabled(False)
+            self.view.set_status(
+                "Error: la IA propuso una jugada inválida. Pulsa 'Nueva partida'."
+            )

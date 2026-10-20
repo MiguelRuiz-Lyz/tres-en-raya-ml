@@ -3,10 +3,11 @@ Nombre: Miguel Ruiz Loayza
 Versión: v1.2
 
 - Representar el tablero 3x3.
-- Validar movimientos.
+- Validar movimentos.
 - Detectar victoria y empate.
-- Aplicar y deshacer movimientos (Backtracking).
+- Aplicar y deshacer movimientos (Backtracking): make_move / undo_move..
 """
+
 
 class Board:
     """Tablero de Tres en Raya. Guarda el estado y conoce las reglas."""
@@ -64,9 +65,22 @@ class Board:
         self.grid[row][col] = player
         return True
 
-    # ------------------------------------------------------------------
+    def undo_move(self, move):
+        """
+        BACKTRACKING: deshace una jugada vaciando la casilla.
+        Devuelve True si deshizo algo y False si no había nada que
+        deshacer (casilla fuera del tablero o ya vacía).
+        """
+        row, col = move
+        if not (0 <= row < 3 and 0 <= col < 3):
+            return False
+        if self.grid[row][col] == self.EMPTY:
+            return False
+        self.grid[row][col] = self.EMPTY
+        return True    
+
     # Fin de partida
-    # ------------------------------------------------------------------
+
     def check_winner(self, player):
         """¿Ha ganado 'player'? Revisa filas, columnas y diagonales."""
         g = self.grid

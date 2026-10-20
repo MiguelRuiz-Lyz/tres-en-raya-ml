@@ -2,16 +2,16 @@ from model.game_model import Board
 
 tablero = Board()
 
-print("1) Tablero vacío:")
+print("Creo el tablero:")
 print(tablero)
 print("Jugadas disponibles:", len(tablero.get_available_moves()), "(esperado: 9)")
 
-print("\n2) Jugada válida y jugada en casilla ocupada:")
+print("\nJugada válida y jugada en casilla ocupada:")
 print("X en (1,1):", tablero.make_move((1, 1), 'X'), "(esperado: True)")
 print("O en (1,1):", tablero.make_move((1, 1), 'O'), "(esperado: False)")
 print("O en (5,5):", tablero.make_move((5, 5), 'O'), "(esperado: False)")
 
-print("\n3) Victoria por fila:")
+print("\nVictoria por fila:")
 t = Board()
 t.make_move((0, 0), 'X')
 t.make_move((0, 1), 'X')
@@ -20,20 +20,20 @@ print(t)
 print("¿Ganó X?", t.check_winner('X'), "(esperado: True)")
 print("¿Ganó O?", t.check_winner('O'), "(esperado: False)")
 
-print("\n4) Victoria por columna:")
+print("\nVictoria por columna:")
 t = Board()
 for f in range(3):
     t.make_move((f, 2), 'O')
 print("¿Ganó O?", t.check_winner('O'), "(esperado: True)")
 
-print("\n5) Victoria por diagonal:")
+print("\nVictoria por diagonal:")
 t = Board()
 t.make_move((0, 0), 'X')
 t.make_move((1, 1), 'X')
 t.make_move((2, 2), 'X')
 print("¿Ganó X?", t.check_winner('X'), "(esperado: True)")
 
-print("\n6) Empate:")
+print("\nEmpate:")
 t = Board()
 #  X O X
 #  X O O

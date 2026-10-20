@@ -1,0 +1,4 @@
+[33m7a9d740[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Día 4: controlador que conecta modelo y vista (modo Humano vs Humano)
+[33me9fa4d2[m Día 3: vista Tkinter con tablero, modos, estado y métricas
+[33m752e84f[m Día 2: modelo del juego con tablero 3x3, validación, victoria y empate
+[33m20ec8d0[m[33m ([m[1;31morigin/main[m[33m)[m Día 1: estructura inicial del proyecto con patrón MVC

@@ -8,7 +8,11 @@ Semana 3, Días 3 y 4: Árbol de Decisión y agente ML.
 IMPORTANTE: este archivo NO debe importar nada de view/ ni controller/.
 """
 
+import os
 import random
+
+import numpy as np
+import pandas as pd
 
 from model.game_model import Board
 from model.minimax_agent import MinimaxAgent
@@ -114,3 +118,115 @@ class DatasetGenerator:
             registros.extend(nuevos)
             resumen[resultado] += 1
         return registros, resumen
+
+
+
+# ----------------------------------------------------------------------
+# Día 2: limpieza, validación y guardado del dataset
+# ----------------------------------------------------------------------
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "dataset.csv")
+
+FEATURE_COLUMNS = [f"c{i}" for i in range(9)]   # c0..c8: las 9 casillas
+TARGET_COLUMN = "move"                          # la casilla elegida (0..8)
+
+
+def records_to_dataframe(registros):
+    """Lista de registros -> tabla con columnas c0..c8 y move.
+    (Las columnas 'game' y 'player' se descartan a propósito.)"""
+    filas = []
+    for reg in registros:
+        fila = dict(zip(FEATURE_COLUMNS, reg["cells"]))
+        fila[TARGET_COLUMN] = reg["move"]
+        filas.append(fila)
+    return pd.DataFrame(filas, columns=FEATURE_COLUMNS + [TARGET_COLUMN])
+
+
+def clean_dataset(df):
+    """
+    Quita nulos y duplicados, convierte a enteros y ordena.
+    NO resuelve contradicciones: de eso se encarga validate_dataset.
+    Devuelve (tabla_limpia, informe).
+    """
+    informe = {"rows_before": len(df)}
+
+    sin_nulos = df.dropna()
+    informe["nulls_removed"] = len(df) - len(sin_nulos)
+
+    sin_duplicados = sin_nulos.drop_duplicates()
+    informe["duplicates_removed"] = len(sin_nulos) - len(sin_duplicados)
+
+    limpio = (sin_duplicados.astype(int)
+              .sort_values(FEATURE_COLUMNS + [TARGET_COLUMN])
+              .reset_index(drop=True))
+    informe["rows_after"] = len(limpio)
+    return limpio, informe
+
+
+def validate_dataset(df):
+    """Devuelve la lista de problemas encontrados ([] = dataset válido)."""
+    if list(df.columns) != FEATURE_COLUMNS + [TARGET_COLUMN]:
+        return ["Las columnas no son c0..c8 + move."]
+    if df.empty:
+        return ["El dataset está vacío."]
+    if df.isnull().any().any():
+        return ["Hay valores nulos."]
+
+    problemas = []
+    valores = df[FEATURE_COLUMNS].to_numpy()
+    etiquetas = df[TARGET_COLUMN].to_numpy().astype(int)
+
+    if not np.isin(valores, [-1, 0, 1]).all():
+        problemas.append("Hay casillas con valores distintos de -1, 0 o 1.")
+
+    if not ((etiquetas >= 0) & (etiquetas <= 8)).all():
+        problemas.append("Hay etiquetas fuera del rango 0..8.")
+    else:
+        ocupadas = valores[np.arange(len(df)), etiquetas] != 0
+        if ocupadas.any():
+            problemas.append(
+                f"{int(ocupadas.sum())} filas eligen una casilla ocupada.")
+
+    mias = (valores == 1).sum(axis=1)
+    rivales = (valores == -1).sum(axis=1)
+    imposibles = ~((mias == rivales) | (rivales == mias + 1))
+    if imposibles.any():
+        problemas.append(
+            f"{int(imposibles.sum())} filas tienen una cantidad imposible de fichas.")
+
+    repetidas = int(df.duplicated(subset=FEATURE_COLUMNS).sum())
+    if repetidas:
+        problemas.append(
+            f"{repetidas} filas repiten una posición (duplicada o contradictoria).")
+
+    return problemas
+
+
+def save_dataset(df, path=DEFAULT_DATASET_PATH):
+    """Guarda la tabla como CSV (crea la carpeta si no existe)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    df.to_csv(path, index=False)
+    return path
+
+
+def load_dataset(path=DEFAULT_DATASET_PATH):
+    """Lee el CSV y devuelve la tabla."""
+    return pd.read_csv(path)
+
+
+def build_dataset(n_games=1000, seed=42, path=None):
+    """
+    Proceso completo: simular -> tabla -> limpiar -> validar -> (guardar).
+    Devuelve (tabla, informe_de_limpieza, resumen_de_partidas).
+    Lanza ValueError si la validación encuentra problemas.
+    """
+    registros, resumen = DatasetGenerator(seed=seed).generate(n_games)
+    tabla, informe = clean_dataset(records_to_dataframe(registros))
+
+    problemas = validate_dataset(tabla)
+    if problemas:
+        raise ValueError("Dataset inválido: " + "; ".join(problemas))
+
+    if path is not None:
+        save_dataset(tabla, path)
+    return tabla, informe, resumen
